@@ -753,9 +753,10 @@ function viewEtiq(){
       <div class="row between"><strong>Pré-visualização</strong><span class="muted" id="etiqCount">0 etiqueta(s)</span></div>
       <div id="etiqPrev" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:10px;max-height:44vh;overflow:auto"></div>
       <div class="row" style="margin-top:14px">
-        <button class="btn" onclick="baixarPRN()">&#11015; Baixar etiquetas (.prn)</button>
+        <button class="btn" onclick="imprimirEtiquetas()">&#128424; Imprimir etiquetas</button>
+        <button class="btn ghost" onclick="baixarPRN()">&#11015; Baixar .prn (rede)</button>
       </div>
-      <p class="hint" style="margin-top:10px">Depois de baixar, dê 2 cliques no <b>enviador-etiquetas.bat</b> (mesma pasta) para imprimir na C3 Tech. A pré-visualização acima mostra como o código fica.</p>
+      <p class="hint" style="margin-top:10px"><b>Imprimir</b> manda direto para a impressora de etiquetas instalada no computador (escolha-a na janela que abrir, ou deixe-a como padrão para sair de primeira). O botão <b>.prn</b> é a alternativa por rede, via <b>enviador-etiquetas.bat</b>.</p>
     </div>
   </div>`;
 }
@@ -813,6 +814,32 @@ function baixarPRN(){
   const ts=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
   dl(new Blob([tspl],{type:'application/octet-stream'}),'etiquetas-'+ts+'.prn');
   toast('Arquivo .prn gerado — rode o enviador-etiquetas.bat');
+}
+function imprimirEtiquetas(){
+  const ids=Object.keys(selEtiq);
+  if(!ids.length){alert('Selecione ao menos uma peça para etiquetar.');return;}
+  const p=db.params.etiqueta||{wmm:50,hmm:25};
+  const SVGNS='http://www.w3.org/2000/svg';
+  let pages='';
+  ids.forEach(id=>{
+    const it=itemById(+id);if(!it)return;const code=(codigoDe(it)||'').toString();if(!code)return;
+    const svg=document.createElementNS(SVGNS,'svg');
+    let svgStr='';
+    try{JsBarcode(svg,code,{format:'CODE128',width:2,height:Math.round(p.hmm*7),displayValue:true,fontSize:22,textMargin:2,margin:0});svgStr=new XMLSerializer().serializeToString(svg);}
+    catch(e){svgStr='<div style="font-size:10pt">'+code+'</div>';}
+    for(let q=0;q<selEtiq[id];q++) pages+=`<div class="lbl">${svgStr}</div>`;
+  });
+  const doc=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Etiquetas</title><style>
+    @page{size:${p.wmm}mm ${p.hmm}mm;margin:0}
+    html,body{margin:0;padding:0}
+    .lbl{width:${p.wmm}mm;height:${p.hmm}mm;display:flex;align-items:center;justify-content:center;overflow:hidden;page-break-after:always;box-sizing:border-box;padding:1mm}
+    .lbl:last-child{page-break-after:auto}
+    .lbl svg{max-width:${Math.max(10,p.wmm-3)}mm;max-height:${Math.max(6,p.hmm-2)}mm}
+  </style></head><body>${pages}</body></html>`;
+  let ifr=document.getElementById('printFrame');
+  if(!ifr){ifr=document.createElement('iframe');ifr.id='printFrame';ifr.style.cssText='position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0';document.body.appendChild(ifr);}
+  const d=ifr.contentWindow.document;d.open();d.write(doc);d.close();
+  setTimeout(()=>{try{ifr.contentWindow.focus();ifr.contentWindow.print();}catch(e){alert('Não foi possível abrir a impressão: '+e.message);}},350);
 }
 
 /* ============ EXPEDIÇÃO (bipar dá baixa) ============ */
