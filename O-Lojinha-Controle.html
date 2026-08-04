@@ -180,7 +180,7 @@ function seedToItem(s){return {kit:s.kit||1,fornecedor:s.fornecedor,ref:s.ref,co
 function keyOf(i){return [i.kit||1,i.cod||'',i.cod2||'',i.ref||''].join('|');}
 function defaultState(){
   return {
-    params:{ usd:5.40, ouro:750, markup:3, descBruto:20, loja:{nome:'Lôjinha', whatsapp:'', validade:7, cnpj:'', endereco:''}, etiqueta:{ip:'192.168.1.50', porta:9100, wmm:50, hmm:25, gapmm:2} },
+    params:{ usd:5.40, ouro:750, markup:3, descBruto:20, loja:{nome:'Lôjinha', whatsapp:'', validade:7, cnpj:'', endereco:''}, etiqueta:{ip:'192.168.1.50', porta:9100, wmm:50, hmm:25, gapmm:2, cols:2, gapX:3, marginX:3} },
     items: SEED_ITEMS.map((s,ix)=>({ id:ix+1, ...seedToItem(s) })),
     movimentos:[], orcamentos:[], seqOrc:1
   };
@@ -192,7 +192,10 @@ function migrate(d){
   if(d.params.markup==null)d.params.markup=3;
   if(d.params.descBruto==null)d.params.descBruto=20;
   if(!d.params.loja)d.params.loja={nome:'Lôjinha',whatsapp:'',validade:7,cnpj:'',endereco:''};
-  if(!d.params.etiqueta)d.params.etiqueta={ip:'192.168.1.50',porta:9100,wmm:50,hmm:25,gapmm:2};
+  if(!d.params.etiqueta)d.params.etiqueta={ip:'192.168.1.50',porta:9100,wmm:50,hmm:25,gapmm:2,cols:2,gapX:3,marginX:3};
+  if(d.params.etiqueta.cols==null)d.params.etiqueta.cols=2;
+  if(d.params.etiqueta.gapX==null)d.params.etiqueta.gapX=3;
+  if(d.params.etiqueta.marginX==null)d.params.etiqueta.marginX=3;
   d.items=d.items||[];d.movimentos=d.movimentos||[];d.orcamentos=d.orcamentos||[];
   if(!d.seqOrc)d.seqOrc=(Math.max(0,...d.orcamentos.map(o=>o.numero||0))+1)||1;
   // upgrade: itens do modelo antigo (banho) para o novo (metal)
@@ -717,9 +720,12 @@ function viewParams(){
       <label class="fld">Porta <input type="number" value="${e.porta||9100}" oninput="db.params.etiqueta.porta=+this.value||9100;save()"></label>
       <label class="fld">Largura da etiqueta (mm) <input type="number" value="${e.wmm||50}" oninput="db.params.etiqueta.wmm=+this.value||50;save()"></label>
       <label class="fld">Altura da etiqueta (mm) <input type="number" value="${e.hmm||25}" oninput="db.params.etiqueta.hmm=+this.value||25;save()"></label>
-      <label class="fld">Gap entre etiquetas (mm) <input type="number" step="0.5" value="${e.gapmm||2}" oninput="db.params.etiqueta.gapmm=+this.value||2;save()"></label>
+      <label class="fld">Colunas (etiquetas por linha) <input type="number" min="1" value="${e.cols||2}" oninput="db.params.etiqueta.cols=+this.value||1;save()"></label>
+      <label class="fld">Espaçamento central entre colunas (mm) <input type="number" step="0.5" value="${e.gapX!=null?e.gapX:3}" oninput="db.params.etiqueta.gapX=+this.value;save()"></label>
+      <label class="fld">Espaçamento lateral (mm) <input type="number" step="0.5" value="${e.marginX!=null?e.marginX:3}" oninput="db.params.etiqueta.marginX=+this.value;save()"></label>
+      <label class="fld">Gap vertical p/ .prn (mm) <input type="number" step="0.5" value="${e.gapmm||2}" oninput="db.params.etiqueta.gapmm=+this.value||2;save()"></label>
     </div>
-    <p class="hint" style="margin-top:10px">Configuração da C3 Tech: driver TSPL, 203 DPI, 50×25mm, ${e.ip||'192.168.1.50'}:${e.porta||9100}. As etiquetas são geradas na aba <b>Etiquetas</b>.</p>
+    <p class="hint" style="margin-top:10px">C3 Tech: 203 DPI, ${e.ip||'192.168.1.50'}:${e.porta||9100}. Layout atual: <b>${e.cols||2} coluna(s)</b> de ${e.wmm||50}×${e.hmm||25}mm, ${e.gapX!=null?e.gapX:3}mm central e ${e.marginX!=null?e.marginX:3}mm lateral. Impressão pelo botão <b>Imprimir etiquetas</b> na aba Etiquetas.</p>
   </div>
   <div class="card pad" style="max-width:520px;margin-top:16px">
     <strong>Backup dos dados</strong>
@@ -818,24 +824,34 @@ function baixarPRN(){
 function imprimirEtiquetas(){
   const ids=Object.keys(selEtiq);
   if(!ids.length){alert('Selecione ao menos uma peça para etiquetar.');return;}
-  const p=db.params.etiqueta||{wmm:50,hmm:25};
+  const p=db.params.etiqueta||{};
+  const wmm=+p.wmm||50, hmm=+p.hmm||25, cols=Math.max(1,+p.cols||2), gapX=(p.gapX!=null?+p.gapX:3), marginX=(p.marginX!=null?+p.marginX:3);
+  const mediaW=marginX*2 + wmm*cols + gapX*(cols-1);
   const SVGNS='http://www.w3.org/2000/svg';
-  let pages='';
+  // expande a lista pela quantidade
+  const cells=[];
   ids.forEach(id=>{
     const it=itemById(+id);if(!it)return;const code=(codigoDe(it)||'').toString();if(!code)return;
-    const svg=document.createElementNS(SVGNS,'svg');
-    let svgStr='';
-    try{JsBarcode(svg,code,{format:'CODE128',width:2,height:Math.round(p.hmm*7),displayValue:true,fontSize:22,textMargin:2,margin:0});svgStr=new XMLSerializer().serializeToString(svg);}
-    catch(e){svgStr='<div style="font-size:10pt">'+code+'</div>';}
-    for(let q=0;q<selEtiq[id];q++) pages+=`<div class="lbl">${svgStr}</div>`;
+    const svg=document.createElementNS(SVGNS,'svg');let svgStr='';
+    try{JsBarcode(svg,code,{format:'CODE128',width:2,height:Math.round(hmm*6),displayValue:true,fontSize:20,textMargin:2,margin:0});svgStr=new XMLSerializer().serializeToString(svg);}
+    catch(e){svgStr='<div style="font-size:9pt">'+code+'</div>';}
+    for(let q=0;q<selEtiq[id];q++) cells.push(svgStr);
   });
+  // agrupa em linhas de "cols"
+  let rows='';
+  for(let i=0;i<cells.length;i+=cols){
+    let r='';
+    for(let j=0;j<cols;j++){ r += `<div class="cell">${cells[i+j]||''}</div>`; }
+    rows += `<div class="row">${r}</div>`;
+  }
   const doc=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Etiquetas</title><style>
-    @page{size:${p.wmm}mm ${p.hmm}mm;margin:0}
+    @page{size:${mediaW}mm ${hmm}mm;margin:0}
     html,body{margin:0;padding:0}
-    .lbl{width:${p.wmm}mm;height:${p.hmm}mm;display:flex;align-items:center;justify-content:center;overflow:hidden;page-break-after:always;box-sizing:border-box;padding:1mm}
-    .lbl:last-child{page-break-after:auto}
-    .lbl svg{max-width:${Math.max(10,p.wmm-3)}mm;max-height:${Math.max(6,p.hmm-2)}mm}
-  </style></head><body>${pages}</body></html>`;
+    .row{width:${mediaW}mm;height:${hmm}mm;display:flex;justify-content:flex-start;box-sizing:border-box;padding:0 ${marginX}mm;gap:${gapX}mm;page-break-after:always;overflow:hidden}
+    .row:last-child{page-break-after:auto}
+    .cell{width:${wmm}mm;height:${hmm}mm;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .cell svg{max-width:${Math.max(10,wmm-4)}mm;max-height:${Math.max(6,hmm-3)}mm}
+  </style></head><body>${rows}</body></html>`;
   let ifr=document.getElementById('printFrame');
   if(!ifr){ifr=document.createElement('iframe');ifr.id='printFrame';ifr.style.cssText='position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0';document.body.appendChild(ifr);}
   const d=ifr.contentWindow.document;d.open();d.write(doc);d.close();
