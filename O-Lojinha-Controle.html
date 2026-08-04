@@ -563,8 +563,10 @@ function renderPedBuilder(){
       <label class="fld">Endereço <input value="${escA(o.endereco)}" oninput="pedDraft.endereco=this.value"></label>
     </div>
     ${!o.clienteId?`<label class="fld" style="margin-top:8px;flex-direction:row;align-items:center;gap:8px"><input type="checkbox" ${o.salvarCliente?'checked':''} onchange="pedDraft.salvarCliente=this.checked" style="width:auto"> Salvar como novo cliente</label>`:''}
-    <div class="row" style="margin-top:12px;align-items:flex-end">
-      <label class="fld" style="flex:1">Adicionar peça
+    <label class="fld" style="margin-top:12px">Adicionar por código (digite ou bipe o Código 2 e Enter)
+      <input id="pedCodInput" placeholder="Ex.: BI 037" autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault();addPorCodigo(this.value);}"></label>
+    <div class="row" style="margin-top:10px;align-items:flex-end">
+      <label class="fld" style="flex:1">Ou selecionar da lista
         <select id="pedAdd"><option value="">Selecione…</option>
           ${db.items.filter(i=>saldo(i)>0).map(i=>`<option value="${i.id}">${codigoDe(i)} · ${i.tipo} · ${BRL(precoBRL(i))} (estq ${NUM(saldo(i))})</option>`).join('')}
         </select></label>
@@ -605,6 +607,7 @@ function renderPedBuilder(){
 }
 function selCliente(id){if(!id){pedDraft.clienteId=null;renderPedBuilder();return;}const c=clienteById(+id);if(!c)return;pedDraft.clienteId=c.id;pedDraft.cliente=c.nome||'';pedDraft.cpf=c.cpf||'';pedDraft.contato=c.contato||'';pedDraft.endereco=c.endereco||'';renderPedBuilder();}
 function addLinhaPed(){const sel=document.getElementById('pedAdd');const id=+sel.value;if(!id)return;const it=itemById(id);const ex=pedDraft.itens.find(l=>l.itemId===id);if(ex)ex.qtd++;else pedDraft.itens.push({itemId:id,qtd:1,precoUnit:+precoBRL(it).toFixed(2),separado:0});renderPedBuilder();}
+function addPorCodigo(code){code=(code||'').trim();if(!code)return;const it=findByCode(code);if(!it){toast('Código não encontrado: '+code);return;}const ex=pedDraft.itens.find(l=>l.itemId===it.id);if(ex)ex.qtd++;else pedDraft.itens.push({itemId:it.id,qtd:1,precoUnit:+precoBRL(it).toFixed(2),separado:0});renderPedBuilder();toast('Adicionado: '+codigoDe(it));const inp=document.getElementById('pedCodInput');if(inp)inp.focus();}
 function salvarPedido(){
   if(!pedDraft.itens.length){toast('Adicione ao menos uma peça');return;}
   if(!(pedDraft.cliente||'').trim()){toast('Informe o cliente');return;}
@@ -630,7 +633,13 @@ function printPedido(n){
         <div><div style="font-size:26px;font-weight:800">${loja.nome||'Lôjinha'} ✦</div><div style="color:#8a8272">Semijoias & Folheados</div></div>
         <div style="text-align:right"><div style="font-size:20px;font-weight:700">PEDIDO Nº ${o.numero}</div><div style="color:#8a8272">${fmtDate(o.data)} · ${STATUS_LABEL[o.status]||o.status}</div></div>
       </div>
-      <div style="margin:16px 0"><b>Cliente:</b> ${o.cliente||'—'} ${o.contato?' · '+o.contato:''}</div>
+      <div style="margin:14px 0;background:#faf7f0;border-radius:8px;padding:10px 12px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:#8a8272;font-weight:700">Dados do cliente</div>
+        <div><b>${o.cliente||'—'}</b></div>
+        ${o.cpf?`<div style="font-size:13px">CPF/CNPJ: ${o.cpf}</div>`:''}
+        ${o.contato?`<div style="font-size:13px">Contato: ${o.contato}</div>`:''}
+        ${o.endereco?`<div style="font-size:13px">Endereço: ${o.endereco}</div>`:''}
+      </div>
       <table style="width:100%;border-collapse:collapse">
         <tr style="background:#faf7f0"><th style="text-align:left;padding:8px;border-bottom:2px solid #e7e0d2">Peça</th><th style="padding:8px;border-bottom:2px solid #e7e0d2">Qtd</th><th style="text-align:right;padding:8px;border-bottom:2px solid #e7e0d2">Preço</th><th style="text-align:right;padding:8px;border-bottom:2px solid #e7e0d2">Subtotal</th></tr>
         ${linhas}
@@ -640,8 +649,6 @@ function printPedido(n){
         <div style="display:flex;justify-content:space-between;padding:4px 0"><span>Desconto</span><span>− ${BRL(+o.descValor||0)}</span></div>
         ${(+o.frete||0)?`<div style="display:flex;justify-content:space-between;padding:4px 0"><span>Frete</span><span>+ ${BRL(+o.frete||0)}</span></div>`:''}
         <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:2px solid #c39b3f;font-size:20px;font-weight:800"><span>Total</span><span>${BRL(o.total)}</span></div>
-        <div style="display:flex;justify-content:space-between;padding:4px 0;color:#8a8272"><span>Pagamento</span><span>${metodoLabel(o)}</span></div>
-        ${parcela?`<div style="display:flex;justify-content:space-between;padding:4px 0;color:#8a8272"><span>Parcelas</span><span>${o.parcelas}x de ${BRL(parcela)}</span></div>`:''}
       </div>
       ${o.obs?`<p style="margin-top:16px;color:#8a8272"><b>Obs:</b> ${o.obs}</p>`:''}
     </div>`;
@@ -998,35 +1005,40 @@ function fillShip(num){const o=pedById(num);if(!o)return;shipData.pedNum=o.numer
 function gerarEtiquetaTransporte(){
   const s=shipData;const loja=db.params.loja||{};
   if(!s.nome && !s.endereco){alert('Preencha ao menos o destinatário e o endereço.');return;}
+  const ped=s.pedNum?pedById(s.pedNum):null;
   const codigo=s.pedNum?('PED-'+s.pedNum):('ENV-'+new Date().toISOString().slice(0,10).replace(/-/g,''));
+  const linhas=ped?ped.itens.map(l=>{const it=itemById(l.itemId);return `<tr><td style="padding:4px 8px;border-bottom:1px solid #eee"><b>${it?codigoDe(it):'?'}</b> <span style="color:#777">${it?'· '+it.tipo:''}</span></td><td style="padding:4px 8px;text-align:right;border-bottom:1px solid #eee">${l.qtd}</td></tr>`;}).join(''):'';
+  const total=ped?ped.total:0;
   document.getElementById('printArea').innerHTML=`
-    <div style="padding:20px;font-family:inherit;color:#111;max-width:620px;margin:0 auto">
+    <div style="padding:16px;font-family:inherit;color:#111;max-width:600px;margin:0 auto">
       <div style="border:2px solid #111;border-radius:10px;overflow:hidden">
-        <div style="display:flex;justify-content:space-between;align-items:center;background:#111;color:#fff;padding:10px 14px">
-          <div style="font-size:20px;font-weight:800">${loja.nome||'Lôjinha'} ✦</div>
-          <div style="text-align:right;font-size:12px">ETIQUETA DE ENVIO${s.transportadora?' · '+s.transportadora:''}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;background:#111;color:#fff;padding:8px 14px">
+          <div style="font-size:18px;font-weight:800">${loja.nome||'Lôjinha'} ✦</div>
+          <div style="font-size:12px">${s.transportadora?('Transp.: '+s.transportadora):'Etiqueta de envio'}</div>
         </div>
-        <div style="padding:12px 14px;border-bottom:1px dashed #999">
-          <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase">Remetente</div>
-          <div style="font-weight:700">${loja.nome||'Lôjinha'}</div>
-          <div style="font-size:13px">${loja.endereco||''}</div>
-          <div style="font-size:13px">${loja.cnpj?'CNPJ: '+loja.cnpj:''}${loja.whatsapp?' · Tel: '+loja.whatsapp:''}</div>
+        <div style="padding:12px 14px">
+          <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase">Cliente / Destinatário</div>
+          <div style="font-size:19px;font-weight:800">${s.nome||'—'}</div>
+          <div style="font-size:14px">${s.endereco||''}</div>
+          <div style="font-size:13px;color:#444">${s.cpf?'CPF/CNPJ: '+s.cpf:''}${s.tel?' · Tel: '+s.tel:''}</div>
         </div>
-        <div style="padding:14px;background:#f7f7f7">
-          <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase">Destinatário</div>
-          <div style="font-size:20px;font-weight:800">${s.nome||'—'}</div>
-          <div style="font-size:15px;margin-top:2px">${s.endereco||''}</div>
-          <div style="font-size:13px;margin-top:4px">${s.cpf?'CPF/CNPJ: '+s.cpf:''}${s.tel?' · Tel: '+s.tel:''}</div>
+        ${ped?`<div style="padding:0 14px 12px">
+          <div style="font-size:11px;font-weight:700;color:#666;text-transform:uppercase;margin-bottom:4px">Itens do pedido #${ped.numero}</div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <tr style="background:#faf7f0"><th style="text-align:left;padding:4px 8px">Código</th><th style="text-align:right;padding:4px 8px">Qtd</th></tr>
+            ${linhas}
+          </table>
+        </div>`:''}
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-top:2px solid #111">
+          <div style="font-size:13px">Volumes: <b>${s.volumes||1}</b>${s.peso?(' · '+s.peso+' kg'):''}</div>
+          <div style="font-size:19px;font-weight:800">Total: ${BRL(total)}</div>
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-top:2px solid #111">
-          <div style="font-size:13px">Volumes: <b>${s.volumes||1}</b>${s.peso?(' · Peso: <b>'+s.peso+' kg</b>'):''}</div>
-          <svg id="shipBc"></svg>
-        </div>
-        ${s.obs?`<div style="padding:8px 14px;border-top:1px dashed #999;font-size:12px;color:#444">Obs: ${s.obs}</div>`:''}
+        <div style="display:flex;justify-content:center;padding:8px 14px;border-top:1px dashed #999"><svg id="shipBc"></svg></div>
+        ${s.obs?`<div style="padding:6px 14px;font-size:12px;color:#444">Obs: ${s.obs}</div>`:''}
       </div>
-      <div style="text-align:center;color:#999;font-size:11px;margin-top:8px">Emitido em ${new Date().toLocaleString('pt-BR')} · Pedido ${s.pedNum||'—'}</div>
+      <div style="text-align:center;color:#999;font-size:11px;margin-top:6px">Emitido em ${new Date().toLocaleString('pt-BR')} · Pedido ${s.pedNum||'—'}</div>
     </div>`;
-  try{JsBarcode('#shipBc',codigo,{format:'CODE128',width:1.6,height:40,fontSize:12,margin:0});}catch(e){}
+  try{JsBarcode('#shipBc',codigo,{format:'CODE128',width:1.5,height:36,fontSize:12,margin:0});}catch(e){}
   window.print();
 }
 
