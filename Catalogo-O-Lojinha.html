@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Catálogo — Lôjinha</title>
+<style>
+  :root{--gold:#c39b3f;--gold-d:#a67f28;--ink:#26221b;--muted:#8a8272;--bg:#f6f3ec;--card:#fff;--line:#e7e0d2;--ok:#2e7d5b}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  header{background:linear-gradient(120deg,#1f1b14,#3a3122);color:#f6efdd;padding:22px 20px;text-align:center}
+  header .nome{font-size:26px;font-weight:800;letter-spacing:.5px}
+  header .nome span{color:var(--gold)}
+  header .tg{color:#cabfa8;font-size:13px;margin-top:4px}
+  .bar{position:sticky;top:0;z-index:20;background:#efe9dc;border-bottom:1px solid var(--line);padding:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center}
+  .chip{border:0;background:#fff;border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;color:#6b6353}
+  .chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .bar input{padding:8px 12px;border:1px solid var(--line);border-radius:999px;min-width:200px;font:inherit}
+  main{max-width:1150px;margin:0 auto;padding:18px 16px 130px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
+  .prod{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(60,50,20,.08);display:flex;flex-direction:column}
+  .prod .ph{aspect-ratio:1/1;background:#efe9dc;display:flex;align-items:center;justify-content:center;color:#cdbf98;font-size:40px}
+  .prod img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block}
+  .prod .body{padding:12px;display:flex;flex-direction:column;gap:6px;flex:1}
+  .pill{align-self:flex-start;font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;letter-spacing:.4px}
+  .t-ANEL{background:#efe3ff;color:#6b3fa0}.t-BRINCO{background:#e2f0ff;color:#2c6ca8}.t-COLAR{background:#fff0dd;color:#a6641c}
+  .t-PULSEIRA{background:#e2f7ea;color:#227a4e}.t-PIERCING{background:#ffe6ec;color:#b23b5b}.t-BRACELETE{background:#e6f6ff;color:#1f7a94}.t-OUTRO{background:#eee;color:#666}
+  .ref{font-weight:700;font-size:14px}
+  .price{font-size:18px;font-weight:800;color:var(--ink)}
+  .usd{font-size:12px;color:var(--ok);font-weight:700}
+  .estq{font-size:11px;color:var(--muted)}
+  .addrow{display:flex;gap:6px;margin-top:auto;align-items:center}
+  .addrow button{border:1px solid var(--line);background:#fff;width:30px;height:30px;border-radius:8px;font-size:16px;font-weight:800;cursor:pointer;color:#6b6353}
+  .addrow .q{flex:1;text-align:center;font-weight:700}
+  .add{width:100%;border:0;background:var(--gold);color:#2a2310;font-weight:800;padding:9px;border-radius:9px;cursor:pointer;margin-top:8px}
+  .add:hover{background:var(--gold-d);color:#fff}
+  .cart{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid var(--gold);box-shadow:0 -4px 20px rgba(0,0,0,.1);padding:12px 16px;z-index:30}
+  .cart .in{max-width:1150px;margin:0 auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .cart .tot{font-size:20px;font-weight:800}
+  .cart .tot small{font-size:13px;color:var(--ok);font-weight:700;margin-left:6px}
+  .cart .cnt{color:var(--muted);font-size:13px}
+  .btn{border:0;border-radius:10px;padding:11px 18px;font-weight:800;cursor:pointer}
+  .btn.wa{background:#25d366;color:#08331b}
+  .btn.wa:hover{background:#1eb457}
+  .btn.gh{background:#efe9dc;color:#5f5747}
+  .empty{color:var(--muted);text-align:center;padding:40px}
+  dialog{border:0;border-radius:14px;max-width:560px;width:94vw;padding:0}
+  dialog::backdrop{background:rgba(30,25,15,.45)}
+  .dh{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+  .dbd{padding:18px;max-height:60vh;overflow:auto}
+  .df{padding:14px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+  .li{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0ebdf;font-size:14px}
+  label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);font-weight:700;margin-bottom:10px}
+  label.f input,label.f select{padding:9px;border:1px solid var(--line);border-radius:8px;font:inherit}
+  .mini{border:1px solid var(--line);background:#fff;border-radius:8px;padding:4px 9px;cursor:pointer;font-weight:700}
+  @media print{.bar,.cart,.add,.addrow{display:none!important}main{padding-bottom:20px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="nome" id="hNome">Lôjinha <span>✦</span></div>
+  <div class="tg">Semijoias &amp; Folheados · Selecione as peças e monte seu pedido</div>
+</header>
+<div class="bar" id="bar"></div>
+<main><div class="grid" id="grid"></div><div class="empty" id="empty" style="display:none">Nenhuma peça encontrada.</div></main>
+
+<div class="cart">
+  <div class="in">
+    <div><div class="tot" id="ctTot">R$ 0,00 <small id="ctUsd">US$ 0.00</small></div><div class="cnt" id="ctCnt">Nenhum item selecionado</div></div>
+    <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn gh" onclick="openCart()">Ver pedido</button>
+      <button class="btn wa" onclick="enviarWhats()">Enviar pedido no WhatsApp</button>
+    </div>
+  </div>
+</div>
+
+<dialog id="cartDlg">
+  <div class="dh"><strong>Seu pedido</strong><button class="mini" onclick="cartDlg.close()">✕</button></div>
+  <div class="dbd">
+    <label class="f">Seu nome <input id="cliNome" placeholder="Nome completo"></label>
+    <label class="f">Cidade/UF (opcional) <input id="cliCidade" placeholder="Cidade - UF"></label>
+    <label class="f">Forma de pagamento de preferência
+      <select id="cliPag"><option>Pix</option><option>Débito</option><option>Crédito à vista</option><option>Crédito parcelado</option><option>A combinar</option></select></label>
+    <div id="cartList" style="margin-top:8px"></div>
+  </div>
+  <div class="df">
+    <button class="btn gh" onclick="window.print()">Imprimir / PDF</button>
+    <button class="btn wa" onclick="enviarWhats()">Enviar no WhatsApp</button>
+  </div>
+</dialog>
+
+<script>
+const DATA = {"loja": {"nome": "Lôjinha", "whats": "", "validade": 7}, "usd": 5.4, "itens": [{"ref": "BR65", "cod": "BI6211", "tipo": "BRINCO", "foto": "", "brl": 27.48, "usd": 5.09, "estoque": 190}, {"ref": "BR1188", "cod": "BI6212", "tipo": "BRINCO", "foto": "", "brl": 34.08, "usd": 6.31, "estoque": 221}, {"ref": "BR1140P", "cod": "BI6213", "tipo": "BRINCO", "foto": "", "brl": 53.67, "usd": 9.94, "estoque": 194}, {"ref": "BR822", "cod": "BI6214", "tipo": "BRINCO", "foto": "", "brl": 30.27, "usd": 5.61, "estoque": 203}, {"ref": "BR337", "cod": "BI6215", "tipo": "PIERCING", "foto": "", "brl": 21.75, "usd": 4.03, "estoque": 202}, {"ref": "BR1071", "cod": "BI6216", "tipo": "BRINCO", "foto": "", "brl": 39.69, "usd": 7.35, "estoque": 248}, {"ref": "CL1966B", "cod": "CL6329", "tipo": "COLAR", "foto": "", "brl": 71.7, "usd": 13.28, "estoque": 127}, {"ref": "BR139", "cod": "BI6217", "tipo": "PIERCING", "foto": "", "brl": 18.99, "usd": 3.52, "estoque": 223}, {"ref": "BR634", "cod": "BI6218", "tipo": "BRINCO", "foto": "", "brl": 32.76, "usd": 6.07, "estoque": 206}, {"ref": "BR884", "cod": "BI6219", "tipo": "BRINCO", "foto": "", "brl": 65.67, "usd": 12.16, "estoque": 191}, {"ref": "CL1966A", "cod": "CL6330", "tipo": "COLAR", "foto": "", "brl": 71.7, "usd": 13.28, "estoque": 141}, {"ref": "BR607", "cod": "BI6220", "tipo": "BRINCO", "foto": "", "brl": 37.5, "usd": 6.94, "estoque": 204}, {"ref": "BI5646", "cod": "BI6221", "tipo": "BRINCO", "foto": "", "brl": 43.44, "usd": 8.04, "estoque": 179}, {"ref": "BI5958", "cod": "BI6222", "tipo": "BRINCO", "foto": "", "brl": 48.72, "usd": 9.02, "estoque": 344}, {"ref": "BI5224", "cod": "BI6223", "tipo": "BRINCO", "foto": "", "brl": 32.13, "usd": 5.95, "estoque": 179}, {"ref": "BI5909", "cod": "BI6224", "tipo": "BRINCO", "foto": "", "brl": 45.69, "usd": 8.46, "estoque": 62}, {"ref": "BI5167", "cod": "BI6225", "tipo": "BRINCO", "foto": "", "brl": 30.0, "usd": 5.56, "estoque": 174}, {"ref": "CL221900545", "cod": "CL6331", "tipo": "COLAR", "foto": "", "brl": 54.33, "usd": 10.06, "estoque": 143}, {"ref": "CL3179", "cod": "CL6332", "tipo": "COLAR", "foto": "", "brl": 52.62, "usd": 9.74, "estoque": 157}, {"ref": "CL6029", "cod": "CL6333", "tipo": "COLAR", "foto": "", "brl": 120.15, "usd": 22.25, "estoque": 50}, {"ref": "PI4852", "cod": "PI5462", "tipo": "PULSEIRA", "foto": "", "brl": 87.66, "usd": 16.23, "estoque": 172}, {"ref": "PI5201", "cod": "PI5463", "tipo": "PULSEIRA", "foto": "", "brl": 62.43, "usd": 11.56, "estoque": 115}, {"ref": "PI3096", "cod": "PI5464", "tipo": "PULSEIRA", "foto": "", "brl": 36.33, "usd": 6.73, "estoque": 143}, {"ref": "PI4763", "cod": "PI5465", "tipo": "PULSEIRA", "foto": "", "brl": 55.41, "usd": 10.26, "estoque": 197}, {"ref": "BF.08631", "cod": "BI6226", "tipo": "BRINCO", "foto": "", "brl": 9.03, "usd": 1.67, "estoque": 162}, {"ref": "BF.10.957", "cod": "BI6227", "tipo": "BRINCO", "foto": "", "brl": 25.77, "usd": 4.77, "estoque": 164}, {"ref": "BF.11.042", "cod": "BI6228", "tipo": "BRINCO", "foto": "", "brl": 16.17, "usd": 2.99, "estoque": 218}, {"ref": "BF.11.183", "cod": "BI6229", "tipo": "BRINCO", "foto": "", "brl": 21.78, "usd": 4.03, "estoque": 198}, {"ref": "BF.11.208", "cod": "BI6230", "tipo": "BRINCO", "foto": "", "brl": 21.36, "usd": 3.96, "estoque": 175}, {"ref": "BF.11.513", "cod": "BI6231", "tipo": "BRINCO", "foto": "", "brl": 17.55, "usd": 3.25, "estoque": 210}, {"ref": "BF.12.226", "cod": "BI6232", "tipo": "BRINCO", "foto": "", "brl": 26.58, "usd": 4.92, "estoque": 134}, {"ref": "BF.12.227-45", "cod": "CL6334", "tipo": "COLAR", "foto": "", "brl": 39.87, "usd": 7.38, "estoque": 134}, {"ref": "BF.12,574", "cod": "BI6233", "tipo": "BRINCO", "foto": "", "brl": 22.05, "usd": 4.08, "estoque": 170}, {"ref": "BF.12.575", "cod": "BI6234", "tipo": "BRINCO", "foto": "", "brl": 23.43, "usd": 4.34, "estoque": 176}, {"ref": "BF.12.587", "cod": "BI6235", "tipo": "BRINCO", "foto": "", "brl": 22.59, "usd": 4.18, "estoque": 173}, {"ref": "BF.12.629", "cod": "BI6236", "tipo": "BRINCO", "foto": "", "brl": 16.92, "usd": 3.13, "estoque": 189}, {"ref": "AF01075", "cod": "AN0035", "tipo": "ANEL", "foto": "", "brl": 41.16, "usd": 7.62, "estoque": 193}, {"ref": "AF01339", "cod": "AN0036", "tipo": "ANEL", "foto": "", "brl": 46.02, "usd": 8.52, "estoque": 215}, {"ref": "AF01369", "cod": "AN0037", "tipo": "ANEL", "foto": "", "brl": 44.52, "usd": 8.24, "estoque": 224}, {"ref": "AF01483", "cod": "AN0038", "tipo": "ANEL", "foto": "", "brl": 60.9, "usd": 11.28, "estoque": 222}, {"ref": "AF01504", "cod": "AN0039", "tipo": "ANEL", "foto": "", "brl": 71.7, "usd": 13.28, "estoque": 155}, {"ref": "AF01537", "cod": "AN0040", "tipo": "ANEL", "foto": "", "brl": 93.18, "usd": 17.26, "estoque": 127}, {"ref": "AF01675", "cod": "AN0041", "tipo": "ANEL", "foto": "", "brl": 51.36, "usd": 9.51, "estoque": 65}, {"ref": "AF01823", "cod": "AN0042", "tipo": "ANEL", "foto": "", "brl": 33.45, "usd": 6.19, "estoque": 2}, {"ref": "AF01823", "cod": "AN0042", "tipo": "ANEL", "foto": "", "brl": 33.45, "usd": 6.19, "estoque": 10}, {"ref": "AF01823", "cod": "AN0042", "tipo": "ANEL", "foto": "", "brl": 33.45, "usd": 6.19, "estoque": 2}, {"ref": "AF01823", "cod": "AN0042", "tipo": "ANEL", "foto": "", "brl": 33.45, "usd": 6.19, "estoque": 8}, {"ref": "AF01823", "cod": "AN0042", "tipo": "ANEL", "foto": "", "brl": 33.45, "usd": 6.19, "estoque": 8}, {"ref": "AF01823", "cod": "AN0042", "tipo": "ANEL", "foto": "", "brl": 33.45, "usd": 6.19, "estoque": 61}, {"ref": "AF01823", "cod": "AN0042", "tipo": "ANEL", "foto": "", "brl": 33.45, "usd": 6.19, "estoque": 20}, {"ref": "AF01823", "cod": "AN0042", "tipo": "ANEL", "foto": "", "brl": 33.45, "usd": 6.19, "estoque": 47}, {"ref": "AF01823", "cod": "AN0042", "tipo": "ANEL", "foto": "", "brl": 33.45, "usd": 6.19, "estoque": 1}, {"ref": "AF0183", "cod": "AN0043", "tipo": "ANEL", "foto": "", "brl": 42.99, "usd": 7.96, "estoque": 11}, {"ref": "AF0183", "cod": "AN0043", "tipo": "ANEL", "foto": "", "brl": 42.99, "usd": 7.96, "estoque": 33}, {"ref": "AF0183", "cod": "AN0043", "tipo": "ANEL", "foto": "", "brl": 42.99, "usd": 7.96, "estoque": 2}, {"ref": "AF0183", "cod": "AN0043", "tipo": "ANEL", "foto": "", "brl": 42.99, "usd": 7.96, "estoque": 6}, {"ref": "AF0183", "cod": "AN0043", "tipo": "ANEL", "foto": "", "brl": 42.99, "usd": 7.96, "estoque": 32}, {"ref": "AF0183", "cod": "AN0043", "tipo": "ANEL", "foto": "", "brl": 42.99, "usd": 7.96, "estoque": 17}, {"ref": "AF0183", "cod": "AN0043", "tipo": "ANEL", "foto": "", "brl": 42.99, "usd": 7.96, "estoque": 16}, {"ref": "AF0183", "cod": "AN0043", "tipo": "ANEL", "foto": "", "brl": 42.99, "usd": 7.96, "estoque": 1}, {"ref": "AF0194", "cod": "AN0044", "tipo": "ANEL", "foto": "", "brl": 31.74, "usd": 5.88, "estoque": 4}, {"ref": "AF0194", "cod": "AN0044", "tipo": "ANEL", "foto": "", "brl": 31.74, "usd": 5.88, "estoque": 13}, {"ref": "AF0194", "cod": "AN0044", "tipo": "ANEL", "foto": "", "brl": 31.74, "usd": 5.88, "estoque": 17}, {"ref": "AF0194", "cod": "AN0044", "tipo": "ANEL", "foto": "", "brl": 31.74, "usd": 5.88, "estoque": 5}, {"ref": "AF0194", "cod": "AN0044", "tipo": "ANEL", "foto": "", "brl": 31.74, "usd": 5.88, "estoque": 29}, {"ref": "AF0194", "cod": "AN0044", "tipo": "ANEL", "foto": "", "brl": 31.74, "usd": 5.88, "estoque": 2}, {"ref": "AF0194", "cod": "AN0044", "tipo": "ANEL", "foto": "", "brl": 31.74, "usd": 5.88, "estoque": 8}, {"ref": "AF0194", "cod": "AN0044", "tipo": "ANEL", "foto": "", "brl": 31.74, "usd": 5.88, "estoque": 27}, {"ref": "AF0194", "cod": "AN0044", "tipo": "ANEL", "foto": "", "brl": 31.74, "usd": 5.88, "estoque": 50}, {"ref": "AF0194", "cod": "AN0044", "tipo": "ANEL", "foto": "", "brl": 31.74, "usd": 5.88, "estoque": 13}, {"ref": "AF0716", "cod": "AN0045", "tipo": "ANEL", "foto": "", "brl": 34.02, "usd": 6.3, "estoque": 3}, {"ref": "AF0716", "cod": "AN0045", "tipo": "ANEL", "foto": "", "brl": 34.02, "usd": 6.3, "estoque": 5}, {"ref": "AF0716", "cod": "AN0045", "tipo": "ANEL", "foto": "", "brl": 34.02, "usd": 6.3, "estoque": 18}, {"ref": "AF0716", "cod": "AN0045", "tipo": "ANEL", "foto": "", "brl": 34.02, "usd": 6.3, "estoque": 28}, {"ref": "AF0716", "cod": "AN0045", "tipo": "ANEL", "foto": "", "brl": 34.02, "usd": 6.3, "estoque": 50}, {"ref": "AF0716", "cod": "AN0045", "tipo": "ANEL", "foto": "", "brl": 34.02, "usd": 6.3, "estoque": 46}, {"ref": "AF0716", "cod": "AN0045", "tipo": "ANEL", "foto": "", "brl": 34.02, "usd": 6.3, "estoque": 11}, {"ref": "AF0716", "cod": "AN0045", "tipo": "ANEL", "foto": "", "brl": 34.02, "usd": 6.3, "estoque": 15}, {"ref": "AF0716", "cod": "AN0045", "tipo": "ANEL", "foto": "", "brl": 34.02, "usd": 6.3, "estoque": 6}, {"ref": "AF0716", "cod": "AN0045", "tipo": "ANEL", "foto": "", "brl": 34.02, "usd": 6.3, "estoque": 9}, {"ref": "AF0716", "cod": "AN0045", "tipo": "ANEL", "foto": "", "brl": 34.02, "usd": 6.3, "estoque": 3}, {"ref": "AF0716", "cod": "AN0045", "tipo": "ANEL", "foto": "", "brl": 34.02, "usd": 6.3, "estoque": 1}, {"ref": "AF0716", "cod": "AN0045", "tipo": "ANEL", "foto": "", "brl": 34.02, "usd": 6.3, "estoque": 1}, {"ref": "AF0943", "cod": "AN0046", "tipo": "ANEL", "foto": "", "brl": 56.07, "usd": 10.38, "estoque": 26}, {"ref": "AF0943", "cod": "AN0046", "tipo": "ANEL", "foto": "", "brl": 56.07, "usd": 10.38, "estoque": 9}, {"ref": "AF0943", "cod": "AN0046", "tipo": "ANEL", "foto": "", "brl": 56.07, "usd": 10.38, "estoque": 15}, {"ref": "AF0943", "cod": "AN0046", "tipo": "ANEL", "foto": "", "brl": 56.07, "usd": 10.38, "estoque": 7}, {"ref": "AF0943", "cod": "AN0046", "tipo": "ANEL", "foto": "", "brl": 56.07, "usd": 10.38, "estoque": 8}, {"ref": "AF0943", "cod": "AN0046", "tipo": "ANEL", "foto": "", "brl": 56.07, "usd": 10.38, "estoque": 20}, {"ref": "AF0943", "cod": "AN0046", "tipo": "ANEL", "foto": "", "brl": 56.07, "usd": 10.38, "estoque": 18}, {"ref": "AF0943", "cod": "AN0046", "tipo": "ANEL", "foto": "", "brl": 56.07, "usd": 10.38, "estoque": 20}, {"ref": "AF0943", "cod": "AN0046", "tipo": "ANEL", "foto": "", "brl": 56.07, "usd": 10.38, "estoque": 20}, {"ref": "AF0943", "cod": "AN0046", "tipo": "ANEL", "foto": "", "brl": 56.07, "usd": 10.38, "estoque": 20}, {"ref": "CL271", "cod": "CL6335", "tipo": "COLAR", "foto": "", "brl": 72.3, "usd": 13.39, "estoque": 36}, {"ref": "BC51", "cod": "PI5466", "tipo": "BRACELETE", "foto": "", "brl": 55.77, "usd": 10.33, "estoque": 176}, {"ref": "BR814", "cod": "BI6237", "tipo": "BRINCO", "foto": "", "brl": 32.67, "usd": 6.05, "estoque": 177}, {"ref": "BR814", "cod": "BI6237", "tipo": "BRINCO", "foto": "", "brl": 32.67, "usd": 6.05, "estoque": 177}, {"ref": "BR814", "cod": "BI6237", "tipo": "BRINCO", "foto": "", "brl": 32.67, "usd": 6.05, "estoque": 177}, {"ref": "BR814", "cod": "BI6237", "tipo": "BRINCO", "foto": "", "brl": 32.67, "usd": 6.05, "estoque": 177}, {"ref": "BR814", "cod": "BI6237", "tipo": "BRINCO", "foto": "", "brl": 32.67, "usd": 6.05, "estoque": 177}, {"ref": "BR814", "cod": "BI6237", "tipo": "BRINCO", "foto": "", "brl": 32.67, "usd": 6.05, "estoque": 177}, {"ref": "BR907", "cod": "BI6238", "tipo": "BRINCO", "foto": "", "brl": 47.88, "usd": 8.87, "estoque": 198}, {"ref": "BR822", "cod": "BI6239", "tipo": "BRINCO", "foto": "", "brl": 30.27, "usd": 5.61, "estoque": 158}, {"ref": "BR66", "cod": "BI6240", "tipo": "BRINCO", "foto": "", "brl": 33.09, "usd": 6.13, "estoque": 241}, {"ref": "BR370", "cod": "BI6241", "tipo": "BRINCO", "foto": "", "brl": 21.75, "usd": 4.03, "estoque": 230}, {"ref": "BR443", "cod": "BI6242", "tipo": "BRINCO", "foto": "", "brl": 23.46, "usd": 4.34, "estoque": 208}, {"ref": "BR1144", "cod": "BI6243", "tipo": "BRINCO", "foto": "", "brl": 49.71, "usd": 9.21, "estoque": 197}, {"ref": "BR444", "cod": "BI6244", "tipo": "BRINCO", "foto": "", "brl": 23.88, "usd": 4.42, "estoque": 213}, {"ref": "BR538", "cod": "BI6245", "tipo": "BRINCO", "foto": "", "brl": 38.1, "usd": 7.06, "estoque": 201}, {"ref": "BR1239", "cod": "BI6246", "tipo": "BRINCO", "foto": "", "brl": 54.9, "usd": 10.17, "estoque": 194}]};
+document.getElementById('hNome').innerHTML = (DATA.loja.nome||'Lôjinha') + ' <span>✦</span>';
+const money=v=>'R$ '+(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const usd=v=>'US$ '+(v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const cart={}; // ref -> qty
+let filtro='TODOS', busca='';
+const tipos=['TODOS',...[...new Set(DATA.itens.map(i=>i.tipo))]];
+function renderBar(){
+  document.getElementById('bar').innerHTML =
+    tipos.map(t=>`<button class="chip ${filtro===t?'active':''}" onclick="filtro='${t}';renderBar();renderGrid()">${t==='TODOS'?'Todas':t}</button>`).join('')
+    + `<input placeholder="Buscar referência..." value="${busca}" oninput="busca=this.value;renderGrid()">`;
+}
+function visiveis(){
+  return DATA.itens.filter(i=>(filtro==='TODOS'||i.tipo===filtro) && (!busca.trim()||(i.ref||'').toLowerCase().includes(busca.toLowerCase())));
+}
+function renderGrid(){
+  const list=visiveis();
+  document.getElementById('empty').style.display=list.length?'none':'block';
+  document.getElementById('grid').innerHTML=list.map(i=>{
+    const q=cart[i.ref]||0;
+    const foto=i.foto?`<img src="${(i.foto+'').replace(/"/g,'&quot;')}" onerror="this.outerHTML='<div class=ph>✦</div>'">`:`<div class="ph">✦</div>`;
+    return `<div class="prod">${foto}<div class="body">
+      <span class="pill t-${i.tipo||'OUTRO'}">${i.tipo||''}</span>
+      <div class="ref">${i.ref||''}</div>
+      <div class="price">${money(i.brl)} <span class="usd">${usd(i.usd)}</span></div>
+      <div class="estq">${i.estoque} em estoque</div>
+      ${q>0?`<div class="addrow"><button onclick="chg('${i.ref}',-1)">−</button><span class="q">${q}</span><button onclick="chg('${i.ref}',1)">＋</button></div>`
+           :`<button class="add" onclick="chg('${i.ref}',1)">Adicionar</button>`}
+    </div></div>`;
+  }).join('');
+}
+function chg(ref,d){
+  const it=DATA.itens.find(x=>x.ref===ref);const max=it?it.estoque:99;
+  cart[ref]=Math.max(0,Math.min(max,(cart[ref]||0)+d));
+  if(cart[ref]===0)delete cart[ref];
+  renderGrid();renderCart();
+}
+function lines(){return Object.keys(cart).map(ref=>{const it=DATA.itens.find(x=>x.ref===ref);return{it,q:cart[ref]};});}
+function totals(){let brl=0,u=0,n=0;lines().forEach(l=>{brl+=l.it.brl*l.q;u+=l.it.usd*l.q;n+=l.q;});return{brl,u,n};}
+function renderCart(){
+  const t=totals();
+  document.getElementById('ctTot').innerHTML=`${money(t.brl)} <small id="ctUsd">${usd(t.u)}</small>`;
+  document.getElementById('ctCnt').textContent=t.n?`${t.n} peça(s) selecionada(s)`:'Nenhum item selecionado';
+}
+function openCart(){
+  const ls=lines();
+  document.getElementById('cartList').innerHTML= ls.length? ls.map(l=>`<div class="li"><span>${l.q}x ${l.it.ref} <small style="color:#8a8272">(${l.it.tipo})</small></span><span>${money(l.it.brl*l.q)}</span></div>`).join('')
+    + `<div class="li" style="border:0;font-weight:800;font-size:16px"><span>Total</span><span>${money(totals().brl)} <small style="color:#2e7d5b">${usd(totals().u)}</small></span></div>`
+    : '<p style="color:#8a8272">Seu pedido está vazio. Toque em “Adicionar” nas peças.</p>';
+  document.getElementById('cartDlg').showModal();
+}
+function pedidoTexto(){
+  const ls=lines();if(!ls.length)return null;
+  const nome=document.getElementById('cliNome').value.trim();
+  const cidade=document.getElementById('cliCidade').value.trim();
+  const pag=document.getElementById('cliPag').value;
+  let m=`*Pedido — ${DATA.loja.nome||'Lôjinha'}*\n`;
+  if(nome)m+=`Cliente: ${nome}\n`;
+  if(cidade)m+=`Cidade: ${cidade}\n`;
+  m+=`\n`;
+  ls.forEach(l=>{m+=`• ${l.q}x ${l.it.ref} (${l.it.tipo}) — ${money(l.it.brl*l.q)}\n`;});
+  const t=totals();
+  m+=`\n*Total: ${money(t.brl)}* (${usd(t.u)})\n`;
+  m+=`Pagamento: ${pag}`;
+  return m;
+}
+function enviarWhats(){
+  const txt=pedidoTexto();
+  if(!txt){alert('Adicione peças ao pedido primeiro.');return;}
+  const whats=(DATA.loja.whats||'').replace(/\D/g,'');
+  const url = whats ? `https://wa.me/${whats}?text=${encodeURIComponent(txt)}` : `https://wa.me/?text=${encodeURIComponent(txt)}`;
+  window.open(url,'_blank');
+}
+renderBar();renderGrid();renderCart();
+</script>
+</body>
+</html>
