@@ -123,6 +123,7 @@
         <label class="fld">Metal (R$) <input id="f_metal" type="number" step="0.01"></label>
         <label class="fld">Embalagem (R$) <input id="f_embalagem" type="number" step="0.01"></label>
         <label class="fld">Markup (x) <input id="f_markup" type="number" step="0.1"></label>
+        <label class="fld">Preço venda MANUAL (R$) — 0 = usar markup <input id="f_precoManual" type="number" step="0.01"></label>
         <label class="fld">Saldo inicial <input id="f_saldoInicial" type="number" step="1"></label>
       </div>
       <label class="fld" style="margin-top:12px">Foto (link ou caminho do arquivo)
@@ -246,7 +247,7 @@ const escA=s=>(s||'').toString().replace(/"/g,'&quot;');
 const descBrutoPct=()=>(+db.params.descBruto||0);
 const custo=it=>(+it.bruto||0)*(1-descBrutoPct()/100)+(+it.metal||0)+(+it.embalagem||0);
 const markupOf=it=>(+it.markup||+db.params.markup||1);
-const precoBRL=it=>custo(it)*markupOf(it);
+const precoBRL=it=>((+it.precoManual)>0? +it.precoManual : custo(it)*markupOf(it));
 const precoUSD=it=>precoBRL(it)/(+db.params.usd||1);
 const movSum=id=>db.movimentos.filter(m=>m.itemId===id).reduce((s,m)=>s+(m.tipo==='entrada'?+m.qtd:-+m.qtd),0);
 const saldo=it=>(+it.saldoInicial||0)+movSum(it.id);
@@ -382,7 +383,7 @@ function refreshCadTable(){
     <td><span class="code">${i.cod2||'—'}</span> <span class="muted" style="font-size:10px">K${i.kit||1}</span></td>
     <td>${i.ref||''}</td><td>${i.fornecedor||''}</td>
     <td class="right money">${BRL(custo(i))}</td>
-    <td class="right">${markupOf(i)}x</td>
+    <td class="right">${(+i.precoManual)>0?'<span class="tag" style="background:#efe3ff;color:#6b3fa0">manual</span>':markupOf(i)+'x'}</td>
     <td class="right money"><b>${BRL(precoBRL(i))}</b></td>
     <td class="right money usd">${USD(precoUSD(i))}</td>
     <td class="right ${saldo(i)<=0?'neg':''}">${saldo(i)<=0?'sem estoque':NUM(saldo(i))}</td>
@@ -403,10 +404,10 @@ function openItem(id){
   const set=(k,v)=>document.getElementById('f_'+k).value=(v==null?'':v);
   set('tipo',it.tipo);set('fornecedor',it.fornecedor);set('ref',it.ref);set('cod',it.cod);set('cod2',it.cod2);
   set('pesoG',it.pesoG);set('bruto',it.bruto);set('metal',it.metal);set('embalagem',it.embalagem);
-  set('markup',it.markup==null?db.params.markup:it.markup);set('saldoInicial',it.saldoInicial);set('foto',it.foto);
+  set('markup',it.markup==null?db.params.markup:it.markup);set('precoManual',it.precoManual);set('saldoInicial',it.saldoInicial);set('foto',it.foto);
   document.getElementById('itemDlgTitle').textContent=id?'Editar peça':'Nova peça';
   document.getElementById('calc_desc').textContent=descBrutoPct();
-  ['bruto','metal','embalagem','markup'].forEach(k=>document.getElementById('f_'+k).oninput=calcItem);
+  ['bruto','metal','embalagem','markup','precoManual'].forEach(k=>document.getElementById('f_'+k).oninput=calcItem);
   calcItem();previewFoto();
   dlg.showModal();
 }
@@ -414,9 +415,10 @@ function calcItem(){
   const g=k=>+document.getElementById('f_'+k).value||0;
   const c=g('bruto')*(1-descBrutoPct()/100)+g('metal')+g('embalagem');
   const mk=+document.getElementById('f_markup').value||db.params.markup;
-  const brl=c*mk;
+  const man=g('precoManual');
+  const brl=man>0?man:c*mk;
   document.getElementById('calc_custo').textContent=BRL(c);
-  document.getElementById('calc_brl').textContent=BRL(brl);
+  document.getElementById('calc_brl').textContent=BRL(brl)+(man>0?' (manual)':'');
   document.getElementById('calc_usd').textContent=USD(brl/(+db.params.usd||1));
 }
 function previewFoto(){
@@ -431,7 +433,7 @@ function saveItem(e){
   const id=g('id');
   const data={tipo:g('tipo'),fornecedor:g('fornecedor'),ref:g('ref'),cod:g('cod'),cod2:g('cod2'),
     pesoG:gn('pesoG'),bruto:gn('bruto'),metal:gn('metal'),embalagem:gn('embalagem'),
-    markup:gn('markup')||db.params.markup,saldoInicial:gn('saldoInicial'),foto:g('foto').trim()};
+    markup:gn('markup')||db.params.markup,precoManual:gn('precoManual'),saldoInicial:gn('saldoInicial'),foto:g('foto').trim()};
   if(id){Object.assign(itemById(+id),data);}
   else{const nid=Math.max(0,...db.items.map(i=>i.id))+1;db.items.push({id:nid,kit:0,qtd:data.saldoInicial,...data});}
   save();toast('Peça salva');render();
@@ -744,7 +746,10 @@ function viewParams(){
         <label class="fld">Cotação do Ouro (referência)
           <input type="number" step="0.01" value="${db.params.ouro}" oninput="db.params.ouro=+this.value||0;save()"></label>
       </div>
-      <p class="hint" style="margin-top:14px">Custo = valor bruto − ${descBrutoPct()}% + metal + embalagem. Preço de venda = custo × markup. Preço em dólar = preço em R$ ÷ cotação.</p>
+      <div class="row" style="margin-top:12px">
+        <button class="btn" onclick="aplicarMarkupTodas()">Aplicar markup padrão a todas as peças</button>
+      </div>
+      <p class="hint" style="margin-top:12px">Custo = valor bruto − ${descBrutoPct()}% + metal + embalagem. Preço de venda = custo × markup. Preço em dólar = preço em R$ ÷ cotação.<br>Mudar o "Markup padrão" acima <b>não</b> recalcula sozinho as peças já cadastradas — clique em <b>Aplicar a todas</b>. Peças com <b>preço manual</b> (no cadastro da peça) ignoram o markup.</p>
     </div>
     <div class="card pad">
       <strong>Dados da loja</strong>
@@ -785,6 +790,7 @@ function viewParams(){
   </div>`;
 }
 function resetAll(){if(confirm('Isto apaga todas as alterações, movimentações e orçamentos, voltando aos dados originais das planilhas. Continuar?')){db=defaultState();save();render();toast('Dados restaurados');}}
+function aplicarMarkupTodas(){if(!confirm('Aplicar o markup padrão ('+db.params.markup+'x) a TODAS as peças? Substitui o markup individual e recalcula os preços. Peças com preço manual não são afetadas.'))return;db.items.forEach(it=>{it.markup=db.params.markup;});save();render();toast('Markup '+db.params.markup+'x aplicado a todas as peças');}
 
 /* ============ ETIQUETAS (código de barras TSPL) ============ */
 let etiqFilter='TODOS', etiqSearch='', selEtiq={};
