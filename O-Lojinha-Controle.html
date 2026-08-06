@@ -196,11 +196,11 @@ let charts={};
 
 function seedToItem(s){return {kit:s.kit||1,fornecedor:s.fornecedor,ref:s.ref,cod:s.cod,cod2:s.cod2,
   tipo:TIPOS.includes(s.tipo)?s.tipo:'OUTRO',bruto:s.bruto||0,metal:s.metal||0,embalagem:s.embalagem||0,
-  pesoG:s.pesoG||0,markup:3,foto:'',qtd:s.qtd||0,saldoInicial:(s.disponivel? (s.qtd||0):0)};}
+  pesoG:s.pesoG||0,markup:2,foto:'',qtd:s.qtd||0,saldoInicial:(s.disponivel? (s.qtd||0):0)};}
 function keyOf(i){return [i.kit||1,i.cod||'',i.cod2||'',i.ref||''].join('|');}
 function defaultState(){
   return {
-    params:{ usd:5.40, ouro:750, markup:3, descBruto:20, loja:{nome:'Lôjinha', whatsapp:'', validade:7, cnpj:'', endereco:''}, etiqueta:{ip:'192.168.1.50', porta:9100, wmm:50, hmm:25, gapmm:2, cols:2, gapX:3, marginX:3} },
+    params:{ usd:5.40, ouro:750, markup:2, descBruto:20, loja:{nome:'Lôjinha', whatsapp:'', validade:7, cnpj:'', endereco:''}, etiqueta:{ip:'192.168.1.50', porta:9100, wmm:50, hmm:25, gapmm:2, cols:2, gapX:3, marginX:3} },
     items: SEED_ITEMS.map((s,ix)=>({ id:ix+1, ...seedToItem(s) })),
     movimentos:[], clientes:[], pedidos:[], seqPed:1
   };
@@ -209,8 +209,9 @@ function migrate(d){
   d.params=d.params||{};
   if(d.params.usd==null)d.params.usd=5.40;
   if(d.params.ouro==null)d.params.ouro=750;
-  if(d.params.markup==null)d.params.markup=3;
+  if(d.params.markup==null)d.params.markup=2;
   if(d.params.descBruto==null)d.params.descBruto=20;
+  if(!d.params.markupV2){d.params.markup=2;(d.items||[]).forEach(it=>{if(+it.markup===3)it.markup=2;});d.params.markupV2=true;}
   if(!d.params.loja)d.params.loja={nome:'Lôjinha',whatsapp:'',validade:7,cnpj:'',endereco:''};
   if(!d.params.etiqueta)d.params.etiqueta={ip:'192.168.1.50',porta:9100,wmm:50,hmm:25,gapmm:2,cols:2,gapX:3,marginX:3};
   if(d.params.etiqueta.cols==null)d.params.etiqueta.cols=2;
