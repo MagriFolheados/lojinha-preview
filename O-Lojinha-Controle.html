@@ -1168,7 +1168,7 @@ function generateCatalog(){
   const itens=inStock.map(i=>({ref:codigoDe(i),tipo:(TIPOS.includes(i.tipo)?i.tipo:'OUTRO'),foto:i.foto||'',brl:+precoBRL(i).toFixed(2),usd:+precoUSD(i).toFixed(2)}));
   const data={loja:{nome:loja.nome||'Lôjinha',whats:(loja.whatsapp||'').replace(/\D/g,''),validade:loja.validade||7},usd:db.params.usd,itens};
   const src=decodeURIComponent(CATALOG_ENC).replace('__DATA__',()=>JSON.stringify(data));
-  dl(new Blob([src],{type:'text/html;charset=utf-8'}),'Catalogo-Lojinha.html');
+  dl(new Blob([src],{type:'text/html;charset=utf-8'}),'Catalogo-O-Lojinha.html');
   toast(itens.length+' peça(s) com foto no catálogo');
 }
 
