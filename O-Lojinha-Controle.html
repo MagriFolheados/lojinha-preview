@@ -1165,8 +1165,8 @@ function gerarEtiquetaTransporte(){
 /* ============ CATÁLOGO DO CLIENTE ============ */
 function generateCatalog(){
   const loja=db.params.loja||{};
-  const inStock=db.items.filter(i=>(i.foto||'').trim());
-  if(!inStock.length){alert('Nenhuma peça com foto para montar o catálogo. Adicione fotos às peças — o catálogo só mostra peças com foto.');return;}
+  const inStock=db.items.filter(i=>(i.foto||'').trim() && precoBRL(i)>0);
+  if(!inStock.length){alert('Nenhuma peça com foto e com preço para montar o catálogo. Adicione fotos e verifique os preços — o catálogo só mostra peças com foto e valor.');return;}
   const itens=inStock.map(i=>({ref:codigoDe(i),tipo:(TIPOS.includes(i.tipo)?i.tipo:'OUTRO'),foto:i.foto||'',brl:+precoBRL(i).toFixed(2),usd:+precoUSD(i).toFixed(2)}));
   const data={loja:{nome:loja.nome||'Lôjinha',whats:(loja.whatsapp||'').replace(/\D/g,''),validade:loja.validade||7},usd:db.params.usd,itens};
   const src=decodeURIComponent(CATALOG_ENC).replace('__DATA__',()=>JSON.stringify(data));
