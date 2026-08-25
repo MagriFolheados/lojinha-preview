@@ -1206,6 +1206,8 @@ function dl(blob,name){const a=document.createElement('a');a.href=URL.createObje
 
 /* ============ NUVEM (Supabase) — etapa 1: login + estado compartilhado ============ */
 let sb=null,userEmail='',authed=false,pushTimer=null,lastPushTs=0,dirty=false,syncErr=false;
+let cloudFotoSig={},fotoSyncing=false;
+function fotoSig(s){s=s||'';var h=5381;for(var i=0;i<s.length;i+=1000){h=((h<<5)+h+s.charCodeAt(i))|0;}return s.length+':'+(h>>>0);}
 const CFG_KEY='oLojinha_sb';
 function getCfg(){try{return JSON.parse(localStorage.getItem(CFG_KEY)||'null');}catch(e){return null;}}
 function showGate(which){
@@ -1244,15 +1246,37 @@ async function logout(){try{if(sb)await sb.auth.signOut();}catch(e){}authed=fals
 async function afterLogin(session){userEmail=(session&&session.user&&session.user.email)||'';authed=true;await loadCloud();subscribe();hideGate();renderNav();render();updateUserBar();}
 async function loadCloud(){
   try{const {data,error}=await sb.from('lojinha_state').select('data').eq('id',1).single();
-    if(!error && data && data.data && Object.keys(data.data).length){db=migrate(data.data);try{localStorage.setItem(LS_KEY,JSON.stringify(db));}catch(e){}}
+    if(!error && data && data.data && Object.keys(data.data).length){db=migrate(data.data);}
     else{db=migrate(db);await pushCloud();}
+    // carregar fotos (tabela separada) e mesclar por id
+    try{
+      const {data:phs,error:pe}=await sb.from('lojinha_photos').select('id,foto');
+      if(!pe && phs){cloudFotoSig={};const byId={};(db.items||[]).forEach(i=>{byId[i.id]=i;});
+        phs.forEach(p=>{if(byId[p.id])byId[p.id].foto=p.foto;cloudFotoSig[p.id]=fotoSig(p.foto);});}
+    }catch(e){}
+    try{localStorage.setItem(LS_KEY,JSON.stringify(db));}catch(e){}
+    syncFotos();
   }catch(e){toast('Falha ao carregar da nuvem — usando dados locais');}
 }
 function schedulePush(){if(!authed||!sb)return;dirty=true;syncErr=false;updateUserBar();clearTimeout(pushTimer);pushTimer=setTimeout(pushCloud,400);}
-async function pushCloud(){if(!authed||!sb)return;lastPushTs=Date.now();try{const {error}=await sb.from('lojinha_state').upsert({id:1,data:db,updated_at:new Date().toISOString(),updated_by:userEmail});if(error){syncErr=true;}else{dirty=false;syncErr=false;}}catch(e){syncErr=true;}updateUserBar();}
+function lightDb(){return {...db, items:(db.items||[]).map(function(i){var o={};for(var k in i){if(k!=='foto')o[k]=i[k];}return o;})};}
+async function pushCloud(){if(!authed||!sb)return;lastPushTs=Date.now();try{const {error}=await sb.from('lojinha_state').upsert({id:1,data:lightDb(),updated_at:new Date().toISOString(),updated_by:userEmail});if(error){syncErr=true;}else{dirty=false;syncErr=false;}}catch(e){syncErr=true;}updateUserBar();syncFotos();}
+async function syncFotos(){
+  if(!authed||!sb||fotoSyncing)return;fotoSyncing=true;
+  try{
+    const changed=(db.items||[]).filter(function(i){return (i.foto||'').length && cloudFotoSig[i.id]!==fotoSig(i.foto);});
+    for(var k=0;k<changed.length;k+=10){
+      var chunk=changed.slice(k,k+10).map(function(i){return {id:i.id,foto:i.foto,updated_at:new Date().toISOString()};});
+      var res=await sb.from('lojinha_photos').upsert(chunk);
+      if(res.error){syncErr=true;updateUserBar();break;}
+      chunk.forEach(function(c){cloudFotoSig[c.id]=fotoSig(c.foto);});
+    }
+  }catch(e){}
+  fotoSyncing=false;
+}
 function subscribe(){if(!sb)return;try{sb.channel('lojinha_state_ch').on('postgres_changes',{event:'*',schema:'public',table:'lojinha_state'},payload=>{
   if(Date.now()-lastPushTs<1500)return;const nd=payload.new&&payload.new.data;
-  if(nd&&Object.keys(nd).length){db=migrate(nd);try{localStorage.setItem(LS_KEY,JSON.stringify(db));}catch(e){}render();updateUserBar();toast('Atualizado da nuvem');}
+  if(nd&&Object.keys(nd).length){var fotos={};(db.items||[]).forEach(function(i){if(i.foto)fotos[i.id]=i.foto;});db=migrate(nd);db.items.forEach(function(i){if(fotos[i.id])i.foto=fotos[i.id];});try{localStorage.setItem(LS_KEY,JSON.stringify(db));}catch(e){}render();updateUserBar();toast('Atualizado da nuvem');}
 }).subscribe();}catch(e){}}
 function updateUserBar(){const el=document.getElementById('userBar');if(!el)return;
   const st=syncErr?'<span title="A nuvem recusou a gravação. Verifique a conexão/login." style="color:#ffb3b3;font-size:12px;font-weight:700">⚠ erro ao salvar</span>':(dirty?'<span style="color:#ffe08a;font-size:12px">salvando…</span>':'<span style="color:#9fe0b8;font-size:12px">salvo ☁</span>');
